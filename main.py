@@ -1,5 +1,9 @@
 import pygame
 import os
+import sys
+import shared
+import animation
+import animviewer
 
 
 # Class for the main game. Contains game loop and rendering code
@@ -15,11 +19,9 @@ class Game:
     SECOND = 1000
     UPDATE_TIME = SECOND / 60.0
 
-    # Color constants
-    BLACK = (0, 0, 0)
-    WHITE = (255, 255, 255)
-
     def __init__(self):
+        self.read_sys_args()
+
         # Init pygame window
         os.environ['SDL_VIDEO_CENTERED'] = '1'
         pygame.init()
@@ -37,46 +39,52 @@ class Game:
 
         # Init fonts
         pygame.font.init()
-        self.fonts = {}
+        self.debug_font = pygame.font.Font('./res/hack.ttf', 10)
+
+        # Init animations
+        animation.load_all()
 
         self.running = False
+
+    # Read and handle system arguments
+    def read_sys_args(self):
+        for i in range(0, len(sys.argv)):
+            if sys.argv[i] == "--animviewer":
+                self.current_state = animviewer.AnimViewer(sys.argv[i + 1])
 
     # Runs main game loop
     def loop(self):
         self.running = True
         while self.running:
-            self.handle_input()
-            self.render_clear()
-            self.render_text("FPS: " + str(self.fps), 0, 0, Game.WHITE, 10)
-            self.render_flip()
-            self.clock_tick()
+            # Handle input
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+                    self.running = False
+                else:
+                    self.current_state.handle_input(event)
 
-    # Polls and handles pygame events
-    def handle_input(self):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
-                self.running = False
+            # Update
+            self.current_state.update(self.delta)
+
+            # Render
+            self.render_clear()
+            self.current_state.render(self.display)
+            self.render_fps()
+            self.render_flip()
+
+            # Timekeep
+            self.clock_tick()
 
     # Renders text onto the display buffer
     # Will center text if the x or y coordinate on that axis is -1
     # A new font will be loaded if a font of the given size doesn't exist
-    def render_text(self, text, x, y, color, size):
-        if size not in self.fonts.keys():
-            self.fonts[size] = pygame.font.Font('./res/hack.ttf', size)
-        to_render = self.fonts[size].render(text, False, color)
-
-        render_x = x
-        if render_x == -1:
-            render_x = (Game.DISPLAY_WIDTH / 2) - (to_render.get_width() / 2)
-        render_y = y
-        if render_y == -1:
-            render_y = (Game.DISPLAY_HEIGHT / 2) - (to_render.get_height() / 2)
-
-        self.display.blit(to_render, (render_x, render_y))
+    def render_fps(self):
+        to_render = self.debug_font.render("FPS: " + str(self.fps), False, shared.Color.WHITE)
+        self.display.blit(to_render, (0, 0))
 
     # Clears the display buffer
     def render_clear(self):
-        pygame.draw.rect(self.display, Game.BLACK, (0, 0, Game.DISPLAY_WIDTH, Game.DISPLAY_HEIGHT), False)
+        pygame.draw.rect(self.display, shared.Color.BLACK, (0, 0, Game.DISPLAY_WIDTH, Game.DISPLAY_HEIGHT), False)
 
     # Renders the display buffer onto the screen
     def render_flip(self):
