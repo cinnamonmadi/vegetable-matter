@@ -3,14 +3,15 @@ import os
 import sys
 import shared
 import animation
+import level
 import animviewer
 
 
 # Class for the main game. Contains game loop and rendering code
 class Game:
     # Screen size constants
-    SCREEN_WIDTH = 640
-    SCREEN_HEIGHT = 360
+    SCREEN_WIDTH = 1280
+    SCREEN_HEIGHT = 720
     DISPLAY_WIDTH = 640
     DISPLAY_HEIGHT = 360
 
@@ -48,6 +49,7 @@ class Game:
 
     # Read and handle system arguments
     def read_sys_args(self):
+        self.current_state = None
         for i in range(0, len(sys.argv)):
             if sys.argv[i] == "--animviewer":
                 self.current_state = animviewer.AnimViewer(sys.argv[i + 1])
@@ -55,6 +57,8 @@ class Game:
     # Runs main game loop
     def loop(self):
         self.running = True
+        if self.current_state is None:
+            self.current_state = level.Level()
         while self.running:
             # Handle input
             for event in pygame.event.get():

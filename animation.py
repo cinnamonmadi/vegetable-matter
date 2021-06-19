@@ -35,7 +35,7 @@ def load_all():
     global frame_data
 
     frame_data = {
-        'slime_move': load('./res/slime_move.png', 5, (64, 64), True)
+        'player_run': load('./res/player_run.png', 8, (32, 32), True)
     }
 
 
@@ -45,6 +45,7 @@ class Animation:
         self.name = name
         self.set_fps(fps)
         self.reset()
+        self.flip_h = False
 
     def set_fps(self, fps):
         self.frame_duration = 60.0 / fps
@@ -62,4 +63,4 @@ class Animation:
                 self.frame = 0
 
     def get_frame(self):
-        return frame_data[self.name][self.frame]
+        return pygame.transform.flip(frame_data[self.name][self.frame], self.flip_h, False)
