@@ -35,7 +35,9 @@ def load_all():
     global frame_data
 
     frame_data = {
-        'player_run': load('./res/player_run.png', 8, (32, 32), True)
+        'player_run': load('./res/player_run.png', 8, (32, 32), True),
+        'player_jump': load('./res/player_jump.png', 3, (32, 32), True),
+        'player_liftoff': load('./res/player_liftoff.png', 6, (32, 32), True)
     }
 
 
@@ -46,6 +48,7 @@ class Animation:
         self.set_fps(fps)
         self.reset()
         self.flip_h = False
+        self.finished = False
 
     def set_fps(self, fps):
         self.frame_duration = 60.0 / fps
@@ -61,6 +64,10 @@ class Animation:
             self.frame += 1
             if self.frame >= len(frame_data[self.name]):
                 self.frame = 0
+                self.finished = True
 
     def get_frame(self):
         return pygame.transform.flip(frame_data[self.name][self.frame], self.flip_h, False)
+
+    def get_frame_at(self, index):
+        return pygame.transform.flip(frame_data[self.name][index], self.flip_h, False)

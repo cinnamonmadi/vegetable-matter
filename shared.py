@@ -27,8 +27,15 @@ class Vector:
     def sum_with(self, other):
         return Vector(self.x + other.x, self.y + other.y)
 
+    def minus(self, other):
+        return Vector(self.x - other.x, self.y - other.y)
+
     def multiply_by(self, other):
         return Vector(self.x * other, self.y * other)
 
 
 ZERO_VECTOR = Vector(0, 0)
+
+
+def is_rect_collision(rect_a, rect_b):
+    return not (rect_a[0] + rect_a[2] <= rect_b[0] or rect_b[0] + rect_b[2] <= rect_a[0] or rect_a[1] + rect_a[3] <= rect_b[1] or rect_b[1] + rect_b[3] <= rect_a[1])
