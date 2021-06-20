@@ -6,8 +6,10 @@ import animation
 class Player:
     SPEED = 2
     GRAVITY = 0.1
-    MAX_FALL_SPEED = 2
+    MAX_FALL_SPEED = 3
     JUMP_IMPULSE = 3
+    JUMP_INPUT_DURATION = 4
+    COYOTE_TIME_DURATION = 4
 
     def __init__(self):
         self.position = shared.ZERO_VECTOR
@@ -20,6 +22,8 @@ class Player:
         self.size = self.run_animation.get_frame().get_size()
         self.direction = 0
         self.grounded = False
+        self.jump_input_timer = 0
+        self.coyote_timer = 0
 
         self.particles = []
 
@@ -36,12 +40,13 @@ class Player:
         self.direction = direction
 
     def jump(self):
-        if self.grounded:
+        if self.grounded or self.coyote_timer > 0:
             self.velocity.y = -Player.JUMP_IMPULSE
             self.grounded = False
+            self.coyote_timer = 0
             self.particles.append((animation.Animation('player_liftoff', 11), self.position.as_tuple()))
 
-    def update(self, delta):
+    def update(self, delta, platforms):
         self.velocity.x = self.direction * Player.SPEED
         self.velocity.y += Player.GRAVITY * delta
         if self.velocity.y > Player.MAX_FALL_SPEED:
@@ -49,6 +54,20 @@ class Player:
 
         self.movement = self.velocity.multiply_by(delta)
         self.position = self.position.sum_with(self.movement)
+
+        self.check_collisions(platforms)
+        if self.grounded:
+            self.coyote_timer = Player.COYOTE_TIME_DURATION
+        if self.jump_input_timer > 0 and self.grounded:
+            self.jump_input_timer = 0
+            self.jump()
+        self.jump_input_timer -= delta
+        if self.jump_input_timer < 0:
+            self.jump_input_timer = 0
+
+        self.coyote_timer -= delta
+        if self.coyote_timer < 0:
+            self.coyote_timer = 0
 
         if not self.grounded or self.direction == 0:
             self.run_animation.reset()

@@ -11,11 +11,10 @@ class Level:
 
         self.inputs = {
             'PLAYER_LEFT': False,
-            'PLAYER_RIGHT': False,
-            'PLAYER_JUMP': False
+            'PLAYER_RIGHT': False
         }
 
-        self.floor_rect = (0, 300, 640, 60)
+        self.platforms = [(0, 300, 640, 60), (200, 260, 100, 10)]
         self.particles = []
 
     def handle_input(self, event):
@@ -32,7 +31,7 @@ class Level:
             self.inputs['PLAYER_RIGHT'] = True
             self.player.set_direction(1)
         elif event.key == pygame.K_SPACE:
-            self.inputs['PLAYER_JUMP'] = True
+            self.player.jump_input_timer = player.Player.JUMP_INPUT_DURATION
 
     def handle_keyup(self, event):
         if event.key == pygame.K_a:
@@ -47,14 +46,9 @@ class Level:
                 self.player.set_direction(-1)
             else:
                 self.player.set_direction(0)
-        elif event.key == pygame.K_SPACE:
-            self.inputs['PLAYER_JUMP'] = False
 
     def update(self, delta):
-        self.player.update(delta)
-        self.player.check_collisions([self.floor_rect])
-        if self.inputs['PLAYER_JUMP']:
-            self.player.jump()
+        self.player.update(delta, self.platforms)
         self.particles += self.player.get_particles()
 
         for particle in self.particles:
@@ -62,7 +56,8 @@ class Level:
         self.particles = [particle for particle in self.particles if not particle[0].finished]
 
     def render(self, display):
-        pygame.draw.rect(display, shared.Color.WHITE, self.floor_rect)
+        for platform in self.platforms:
+            pygame.draw.rect(display, shared.Color.WHITE, platform)
         display.blit(self.player.get_frame(), self.player.position.as_tuple())
 
         for particle in self.particles:
