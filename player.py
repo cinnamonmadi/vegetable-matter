@@ -10,6 +10,7 @@ class Player:
     JUMP_IMPULSE = 3
     JUMP_INPUT_DURATION = 4
     COYOTE_TIME_DURATION = 4
+    SHOT_DELAY = 7
 
     def __init__(self):
         self.position = shared.ZERO_VECTOR
@@ -26,6 +27,8 @@ class Player:
         self.grounded = False
         self.jump_input_timer = 0
         self.coyote_timer = 0
+
+        self.shoot_timer = 0
 
         self.particles = []
 
@@ -71,6 +74,10 @@ class Player:
         if self.coyote_timer < 0:
             self.coyote_timer = 0
 
+        self.shoot_timer -= delta
+        if self.shoot_timer < 0:
+            self.shoot_timer = 0
+
         if not self.grounded or self.direction == 0:
             self.run_animation.reset()
         else:
@@ -108,8 +115,64 @@ class Player:
             else:
                 return self.jump_animation.get_frame_at(2)
 
+    # get_particles() and get_bullets() hand-off generated child objects to the Level class so that the generated objects will be updated in the scope of Level.update()
     def get_particles(self):
         return_list = []
         while len(self.particles) != 0:
             return_list.append(self.particles.pop(0))
         return return_list
+
+    def shoot(self):
+        if self.shoot_timer > 0:
+            return None
+
+        new_bullet = Bullet()
+        hitbox = self.get_hitbox()
+        new_bullet.position = shared.Vector(hitbox[0] + (hitbox[2] / 2) - (new_bullet.hitbox_size[0] / 2), hitbox[1] + (hitbox[3] / 2) - (new_bullet.hitbox_size[1] / 2))
+        if self.run_animation.flip_h:
+            new_bullet.position.x -= 12
+            new_bullet.velocity = shared.Vector(-Bullet.SPEED, 0)
+        else:
+            new_bullet.position.x += 12
+            new_bullet.velocity = shared.Vector(Bullet.SPEED, 0)
+        self.shoot_timer = Player.SHOT_DELAY
+        return new_bullet
+
+
+class Bullet:
+    DAMAGE = 1
+    SPEED = 7
+    TIME_TO_LIVE = 180
+
+    def __init__(self):
+        self.position = shared.ZERO_VECTOR
+        self.velocity = shared.ZERO_VECTOR
+        self.hitbox_size = (4, 4)
+        self.ttl = Bullet.TIME_TO_LIVE
+        self.delete_me = False
+
+    def get_hitbox(self):
+        return self.position.as_tuple() + self.hitbox_size
+
+    def update(self, delta):
+        self.ttl -= delta
+        if self.ttl <= 0:
+            self.delete_me = True
+
+        movement = self.velocity.multiply_by(delta)
+        self.position = self.position.sum_with(movement)
+
+    # Checks for collisions and requests to delete itself if a collision occurred
+    # If the collision is with an enemy, the enemy is returned so that damage can be applied
+    # Assumes each enemy has a get_hitbox() function
+    def check_collisions(self, static_colliders, enemy_colliders):
+        hitbox = self.get_hitbox()
+        for enemy in enemy_colliders:
+            if shared.is_rect_collision(hitbox, enemy.get_hitbox()):
+                self.delete_me = True
+                return enemy
+        for collider in static_colliders:
+            if shared.is_rect_collision(hitbox, collider):
+                self.delete_me = True
+                return None
+        return None
