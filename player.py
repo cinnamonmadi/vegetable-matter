@@ -20,6 +20,8 @@ class Player:
         self.jump_animation = animation.Animation('player_jump', 1)
 
         self.size = self.run_animation.get_frame().get_size()
+        self.hitbox_offset = shared.Vector(9, 11)
+        self.hitbox_size = (14, 21)
         self.direction = 0
         self.grounded = False
         self.jump_input_timer = 0
@@ -27,8 +29,8 @@ class Player:
 
         self.particles = []
 
-    def get_rect(self):
-        return self.position.as_tuple() + self.size
+    def get_hitbox(self):
+        return self.position.sum_with(self.hitbox_offset).as_tuple() + self.hitbox_size
 
     def set_direction(self, direction):
         if self.run_animation.flip_h and direction == 1:
@@ -77,14 +79,14 @@ class Player:
     def check_collisions(self, colliders):
         self.grounded = False
         for collider in colliders:
-            if shared.is_rect_collision(self.get_rect(), collider):
+            if shared.is_rect_collision(self.get_hitbox(), collider):
                 self.position = self.position.minus(self.movement)
                 x_caused = False
                 y_caused = False
 
-                if shared.is_rect_collision((self.position.x + self.movement.x, self.position.y) + self.size, collider):
+                if shared.is_rect_collision((self.position.x + self.hitbox_offset.x + self.movement.x, self.position.y + self.hitbox_offset.y) + self.hitbox_size, collider):
                     x_caused = True
-                if shared.is_rect_collision((self.position.x, self.position.y + self.movement.y) + self.size, collider):
+                if shared.is_rect_collision((self.position.x + self.hitbox_offset.x, self.position.y + self.hitbox_offset.y + self.movement.y) + self.hitbox_size, collider):
                     y_caused = True
 
                 if not x_caused:
@@ -92,7 +94,8 @@ class Player:
                 if not y_caused:
                     self.position.y += self.movement.y
                 else:
-                    self.grounded = True
+                    if self.velocity.y > 0:
+                        self.grounded = True
 
     def get_frame(self):
         if self.grounded:
