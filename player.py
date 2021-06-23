@@ -11,11 +11,15 @@ class Player:
     JUMP_INPUT_DURATION = 4
     COYOTE_TIME_DURATION = 4
     SHOT_DELAY = 7
+    KNOCKBACK_DURATION = 120
 
     def __init__(self):
-        self.position = shared.ZERO_VECTOR
-        self.velocity = shared.ZERO_VECTOR
-        self.movement = shared.ZERO_VECTOR
+        self.position = shared.Vector.ZERO()
+        self.velocity = shared.Vector.ZERO()
+        self.movement = shared.Vector.ZERO()
+
+        self.knockback = shared.Vector.ZERO()
+        self.knockback_timer = 0
 
         self.run_animation = animation.Animation('player_run', 11)
         self.jump_animation = animation.Animation('player_jump', 1)
@@ -35,6 +39,10 @@ class Player:
     def get_hitbox(self):
         return self.position.sum_with(self.hitbox_offset).as_tuple() + self.hitbox_size
 
+    def apply_knockback(self, x, y):
+        self.knockback_timer = Player.KNOCKBACK_DURATION
+        self.knockback = shared.Vector(x, y)
+
     def set_direction(self, direction):
         if self.run_animation.flip_h and direction == 1:
             self.run_animation.flip_h = False
@@ -51,8 +59,11 @@ class Player:
             self.coyote_timer = 0
             self.particles.append((animation.Animation('player_liftoff', 11), self.position.as_tuple()))
 
-    def update(self, delta, platforms):
-        self.velocity.x = self.direction * Player.SPEED
+    def update(self, delta, platforms, hurtboxes):
+        if self.knockback_timer > 0:
+            self.velocity = self.knockback
+        else:
+            self.velocity.x = self.direction * Player.SPEED
         self.velocity.y += Player.GRAVITY * delta
         if self.velocity.y > Player.MAX_FALL_SPEED:
             self.velocity.y = Player.MAX_FALL_SPEED
@@ -70,6 +81,16 @@ class Player:
         if self.jump_input_timer < 0:
             self.jump_input_timer = 0
 
+        for hurtbox in hurtboxes:
+            if shared.is_rect_collision(self.get_hitbox(), hurtbox):
+                hurtbox_center_x = hurtbox[0] + (hurtbox[2] / 2)
+                hitbox_center_x = self.get_hitbox()[0] + (self.get_hitbox()[2] / 2)
+                if hurtbox_center_x >= hitbox_center_x:
+                    self.apply_knockback(-3, -2)
+                else:
+                    self.apply_knockback(3, -2)
+                break
+
         self.coyote_timer -= delta
         if self.coyote_timer < 0:
             self.coyote_timer = 0
@@ -77,6 +98,10 @@ class Player:
         self.shoot_timer -= delta
         if self.shoot_timer < 0:
             self.shoot_timer = 0
+
+        self.knockback_timer -= delta
+        if self.knockback_timer < 0:
+            self.knockback_timer = 0
 
         if not self.grounded or self.direction == 0:
             self.run_animation.reset()
@@ -87,6 +112,7 @@ class Player:
         self.grounded = False
         for collider in colliders:
             if shared.is_rect_collision(self.get_hitbox(), collider):
+                self.knockback_timer = 0
                 self.position = self.position.minus(self.movement)
                 x_caused = False
                 y_caused = False
@@ -130,10 +156,10 @@ class Player:
         hitbox = self.get_hitbox()
         new_bullet.position = shared.Vector(hitbox[0] + (hitbox[2] / 2) - (new_bullet.hitbox_size[0] / 2), hitbox[1] + (hitbox[3] / 2) - (new_bullet.hitbox_size[1] / 2))
         if self.run_animation.flip_h:
-            new_bullet.position.x -= 12
+            new_bullet.position.x -= 15
             new_bullet.velocity = shared.Vector(-Bullet.SPEED, 0)
         else:
-            new_bullet.position.x += 12
+            new_bullet.position.x += 15
             new_bullet.velocity = shared.Vector(Bullet.SPEED, 0)
         self.shoot_timer = Player.SHOT_DELAY
         return new_bullet
@@ -145,9 +171,9 @@ class Bullet:
     TIME_TO_LIVE = 180
 
     def __init__(self):
-        self.position = shared.ZERO_VECTOR
-        self.velocity = shared.ZERO_VECTOR
-        self.hitbox_size = (4, 4)
+        self.position = shared.Vector.ZERO()
+        self.velocity = shared.Vector.ZERO()
+        self.hitbox_size = (10, 6)
         self.ttl = Bullet.TIME_TO_LIVE
         self.delete_me = False
 
@@ -176,3 +202,6 @@ class Bullet:
                 self.delete_me = True
                 return None
         return None
+
+    def get_frame(self):
+        return animation.frame_data['bullet'][0]

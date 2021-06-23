@@ -37,7 +37,11 @@ def load_all():
     frame_data = {
         'player_run': load('./res/player_run.png', 8, (32, 32), True),
         'player_jump': load('./res/player_jump.png', 3, (32, 32), True),
-        'player_liftoff': load('./res/player_liftoff.png', 6, (32, 32), True)
+        'player_liftoff': load('./res/player_liftoff.png', 6, (32, 32), True),
+        'bullet': load('./res/bullet.png', 1, (10, 6), True),
+        'carrot_run': load('./res/carrot.png', 8, (32, 32), True),
+        'onion_run': load('./res/onion_run.png', 5, (32, 32), True),
+        'onion_attack': load('./res/onion_attack.png', 6, (32, 32), True)
     }
 
 

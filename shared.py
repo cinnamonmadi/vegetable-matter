@@ -12,6 +12,9 @@ class Vector:
         self.x = x
         self.y = y
 
+    def ZERO():
+        return Vector(0, 0)
+
     def as_tuple(self):
         return (self.x, self.y)
 
@@ -34,8 +37,8 @@ class Vector:
     def multiply_by(self, other):
         return Vector(self.x * other, self.y * other)
 
-
-ZERO_VECTOR = Vector(0, 0)
+    def distance_from(self, other):
+        return math.sqrt(((self.x - other.x) ** 2) + ((self.y - other.y) ** 2))
 
 
 def is_rect_collision(rect_a, rect_b):
