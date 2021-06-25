@@ -11,15 +11,15 @@ class Player:
     JUMP_INPUT_DURATION = 4
     COYOTE_TIME_DURATION = 4
     SHOT_DELAY = 7
-    KNOCKBACK_DURATION = 120
+    INVULN_DURATION = 10
 
     def __init__(self):
         self.position = shared.Vector.ZERO()
         self.velocity = shared.Vector.ZERO()
         self.movement = shared.Vector.ZERO()
 
-        self.knockback = shared.Vector.ZERO()
-        self.knockback_timer = 0
+        self.invuln_timer = 0
+        self.knockback_on = False
 
         self.run_animation = animation.Animation('player_run', 11)
         self.jump_animation = animation.Animation('player_jump', 1)
@@ -40,8 +40,9 @@ class Player:
         return self.position.sum_with(self.hitbox_offset).as_tuple() + self.hitbox_size
 
     def apply_knockback(self, x, y):
-        self.knockback_timer = Player.KNOCKBACK_DURATION
-        self.knockback = shared.Vector(x, y)
+        self.knockback_on = True
+        self.invuln_timer = Player.INVULN_DURATION
+        self.velocity = shared.Vector(x, y)
 
     def set_direction(self, direction):
         if self.run_animation.flip_h and direction == 1:
@@ -60,9 +61,10 @@ class Player:
             self.particles.append((animation.Animation('player_liftoff', 11), self.position.as_tuple()))
 
     def update(self, delta, platforms, hurtboxes):
-        if self.knockback_timer > 0:
-            self.velocity = self.knockback
-        else:
+        if self.invuln_timer == 0 and self.direction != 0:
+            self.knockback_on = False
+
+        if not self.knockback_on:
             self.velocity.x = self.direction * Player.SPEED
         self.velocity.y += Player.GRAVITY * delta
         if self.velocity.y > Player.MAX_FALL_SPEED:
@@ -99,9 +101,16 @@ class Player:
         if self.shoot_timer < 0:
             self.shoot_timer = 0
 
-        self.knockback_timer -= delta
-        if self.knockback_timer < 0:
-            self.knockback_timer = 0
+        self.invuln_timer -= delta
+        if self.invuln_timer < 0:
+            self.invuln_timer = 0
+
+        if self.knockback_on:
+            self.run_animation.whitemask = True
+            self.jump_animation.whitemask = True
+        else:
+            self.run_animation.whitemask = False
+            self.jump_animation.whitemask = False
 
         if not self.grounded or self.direction == 0:
             self.run_animation.reset()
@@ -112,7 +121,7 @@ class Player:
         self.grounded = False
         for collider in colliders:
             if shared.is_rect_collision(self.get_hitbox(), collider):
-                self.knockback_timer = 0
+                self.knockback_on = False
                 self.position = self.position.minus(self.movement)
                 x_caused = False
                 y_caused = False

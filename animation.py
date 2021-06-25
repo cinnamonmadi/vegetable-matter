@@ -63,6 +63,8 @@ def load_all():
     }
 
     whitemasked_frame_data = {
+        'player_run': generate_whitemask(frame_data['player_run']),
+        'player_jump': generate_whitemask(frame_data['player_jump']),
         'onion_run': generate_whitemask(frame_data['onion_run']),
         'onion_attack': generate_whitemask(frame_data['onion_attack'])
     }
