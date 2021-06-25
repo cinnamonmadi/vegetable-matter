@@ -3,6 +3,7 @@ import pygame
 
 # An array of named animation frames
 frame_data = {}
+whitemasked_frame_data = {}
 
 
 # Loads an animation from a given path
@@ -29,10 +30,27 @@ def load(path, frame_count, frame_size, has_alpha=True):
     return frames
 
 
+# Returns a copy of an animation but each pixel is white
+# This is used to create an "enemies flashing white when they get hurt effect"
+# Normally you would probably use shaders for this, but pygame doesn't give us a nice way to implement those,
+# and I figured pre-generating copies of the animations upfront would be kinder on the game's FPS than trying to do per-pixel software rendering in real time
+def generate_whitemask(source_animation):
+    whitemask = []
+    for frame in source_animation:
+        whitemasked_frame = pygame.Surface(frame.get_size(), pygame.SRCALPHA, 32)
+        for x in range(0, frame.get_width()):
+            for y in range(0, frame.get_height()):
+                if frame.get_at((x, y)).a != 0:
+                    whitemasked_frame.set_at((x, y), pygame.Color(255, 255, 255, 255))
+        whitemask.append(whitemasked_frame)
+
+    return whitemask
+
+
 # Loads all the animations
 # This is placed here so that it can be called explicitly after pygame has initialized, otherwise some of the image loading functions will fail
 def load_all():
-    global frame_data
+    global frame_data, whitemasked_frame_data
 
     frame_data = {
         'player_run': load('./res/player_run.png', 8, (32, 32), True),
@@ -44,6 +62,11 @@ def load_all():
         'onion_attack': load('./res/onion_attack.png', 6, (32, 32), True)
     }
 
+    whitemasked_frame_data = {
+        'onion_run': generate_whitemask(frame_data['onion_run']),
+        'onion_attack': generate_whitemask(frame_data['onion_attack'])
+    }
+
 
 #  An instance of an animation. Refers to the frames of an animation without actually storing duplicate loaded images
 class Animation:
@@ -53,6 +76,7 @@ class Animation:
         self.reset()
         self.flip_h = False
         self.finished = False
+        self.whitemask = False
 
     def set_fps(self, fps):
         self.frame_duration = 60.0 / fps
@@ -71,7 +95,17 @@ class Animation:
                 self.finished = True
 
     def get_frame(self):
-        return pygame.transform.flip(frame_data[self.name][self.frame], self.flip_h, False)
+        frame = None
+        if self.whitemask:
+            frame = whitemasked_frame_data[self.name][self.frame]
+        else:
+            frame = frame_data[self.name][self.frame]
+        return pygame.transform.flip(frame, self.flip_h, False)
 
     def get_frame_at(self, index):
-        return pygame.transform.flip(frame_data[self.name][index], self.flip_h, False)
+        frame = None
+        if self.whitemask:
+            frame = whitemasked_frame_data[self.name][index]
+        else:
+            frame = frame_data[self.name][index]
+        return pygame.transform.flip(frame, self.flip_h, False)

@@ -46,7 +46,7 @@ class Level:
                 self.player.set_direction(0)
 
     def update(self, delta):
-        self.player.update(delta, self.platforms + [enemy_obj.get_hitbox() for enemy_obj in self.enemies], [enemy_obj.get_hurtbox() for enemy_obj in self.enemies if enemy_obj.get_hurtbox() is not None])
+        self.player.update(delta, self.platforms + [enemy_obj.get_hitbox() for enemy_obj in self.enemies], [enemy_obj.get_hurtbox() for enemy_obj in self.enemies if enemy_obj.is_hurtbox_enabled()])
         self.particles += self.player.get_particles()
         if pygame.key.get_pressed()[pygame.K_l]:
             new_bullet = self.player.shoot()
@@ -60,7 +60,9 @@ class Level:
             bullet.update(delta)
             enemy_obj = bullet.check_collisions(self.platforms, self.enemies)
             if enemy_obj is not None:
-                self.enemies.remove(enemy_obj)
+                enemy_obj.take_damage()
+                if not enemy_obj.is_alive():
+                    self.enemies.remove(enemy_obj)
         self.bullets = [bullet for bullet in self.bullets if not bullet.delete_me]
 
         for particle in self.particles:
