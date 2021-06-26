@@ -16,7 +16,6 @@ class AnimViewer:
         self.hitbox = None
         self.render_hitbox = False
 
-        pygame.font.init()  # Per the pygame docs: it is safe to call this more than once
         self.font = pygame.font.Font('./res/hack.ttf', 10)
 
     def handle_input(self, event):

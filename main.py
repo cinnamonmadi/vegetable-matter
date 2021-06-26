@@ -5,6 +5,7 @@ import shared
 import animation
 import level
 import animviewer
+import editor
 
 
 # Class for the main game. Contains game loop and rendering code
@@ -12,8 +13,6 @@ class Game:
     # Screen size constants
     SCREEN_WIDTH = 1280
     SCREEN_HEIGHT = 720
-    DISPLAY_WIDTH = 640
-    DISPLAY_HEIGHT = 360
 
     # Timekeeping constants
     TARGET_FPS = 60
@@ -21,13 +20,11 @@ class Game:
     UPDATE_TIME = SECOND / 60.0
 
     def __init__(self):
-        self.read_sys_args()
-
         # Init pygame window
         os.environ['SDL_VIDEO_CENTERED'] = '1'
         pygame.init()
         self.screen = pygame.display.set_mode((Game.SCREEN_WIDTH, Game.SCREEN_HEIGHT), 0, 32)
-        self.display = pygame.Surface((Game.DISPLAY_WIDTH, Game.DISPLAY_HEIGHT))
+        self.display = pygame.Surface((shared.DISPLAY_WIDTH, shared.DISPLAY_HEIGHT))
         self.clock = pygame.time.Clock()
 
         # Init timekeeping variables
@@ -45,20 +42,31 @@ class Game:
         # Init animations
         animation.load_all()
 
+        self.read_sys_args()
+
         self.running = False
 
     # Read and handle system arguments
     def read_sys_args(self):
         self.current_state = None
         for i in range(0, len(sys.argv)):
-            if sys.argv[i] == "--animviewer":
+            if sys.argv[i] == '--animviewer':
                 self.current_state = animviewer.AnimViewer(sys.argv[i + 1])
+            elif sys.argv[i] == '--editor':
+                self.current_state = editor.Editor((Game.SCREEN_WIDTH, Game.SCREEN_HEIGHT))
+            elif sys.argv[i] == '--load':
+                self.current_state = level.Level()
+                self.current_state.load_file(sys.argv[i + 1])
 
     # Runs main game loop
     def loop(self):
-        self.running = True
         if self.current_state is None:
             self.current_state = level.Level()
+
+        self.running = True
+        self.before_time = pygame.time.get_ticks()
+        self.before_sec = pygame.time.get_ticks()
+
         while self.running:
             # Handle input
             for event in pygame.event.get():
@@ -88,7 +96,7 @@ class Game:
 
     # Clears the display buffer
     def render_clear(self):
-        pygame.draw.rect(self.display, shared.Color.BLACK, (0, 0, Game.DISPLAY_WIDTH, Game.DISPLAY_HEIGHT), False)
+        pygame.draw.rect(self.display, shared.Color.BLACK, (0, 0, shared.DISPLAY_WIDTH, shared.DISPLAY_HEIGHT), False)
 
     # Renders the display buffer onto the screen
     def render_flip(self):

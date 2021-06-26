@@ -150,6 +150,9 @@ class Player:
             else:
                 return self.jump_animation.get_frame_at(2)
 
+    def get_frame_rect(self):
+        return self.position.as_tuple() + self.get_frame().get_size()
+
     # get_particles() and get_bullets() hand-off generated child objects to the Level class so that the generated objects will be updated in the scope of Level.update()
     def get_particles(self):
         return_list = []
@@ -214,3 +217,6 @@ class Bullet:
 
     def get_frame(self):
         return animation.frame_data['bullet'][0]
+
+    def get_frame_rect(self):
+        return self.position.as_tuple() + self.get_frame().get_size()

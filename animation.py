@@ -30,6 +30,16 @@ def load(path, frame_count, frame_size, has_alpha=True):
     return frames
 
 
+def load_static(path, has_alpha=True):
+    sprite = pygame.image.load(path)
+    if has_alpha:
+        sprite.convert_alpha()
+    else:
+        sprite.convert()
+
+    return [sprite]
+
+
 # Returns a copy of an animation but each pixel is white
 # This is used to create an "enemies flashing white when they get hurt effect"
 # Normally you would probably use shaders for this, but pygame doesn't give us a nice way to implement those,
@@ -56,10 +66,12 @@ def load_all():
         'player_run': load('./res/player_run.png', 8, (32, 32), True),
         'player_jump': load('./res/player_jump.png', 3, (32, 32), True),
         'player_liftoff': load('./res/player_liftoff.png', 6, (32, 32), True),
-        'bullet': load('./res/bullet.png', 1, (10, 6), True),
+        'bullet': load_static('./res/bullet.png', True),
         'carrot_run': load('./res/carrot.png', 8, (32, 32), True),
         'onion_run': load('./res/onion_run.png', 5, (32, 32), True),
-        'onion_attack': load('./res/onion_attack.png', 6, (32, 32), True)
+        'onion_attack': load('./res/onion_attack.png', 6, (32, 32), True),
+        'object_floor': load_static('./res/object_floor.png', False),
+        'object_platform': load_static('./res/object_platform.png', False)
     }
 
     whitemasked_frame_data = {

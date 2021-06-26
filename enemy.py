@@ -109,6 +109,9 @@ class Onion:
         else:
             return self.run_animation.get_frame()
 
+    def get_frame_rect(self):
+        return self.position.as_tuple() + self.get_frame().get_size()
+
     def take_damage(self):
         if self.invuln_timer > 0:
             return
