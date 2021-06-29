@@ -9,18 +9,15 @@ import enemy
 class Level:
     def __init__(self):
         self.player = player.Player()
-        self.player.position = shared.Vector(32, 200)
 
         self.camera_offset = shared.Vector.ZERO()
 
-        self.platforms = [Platform('object_floor', 0, 300), Platform('object_platform', 200, 260)]
+        self.tiles = []
+        self.platforms = []
+
         self.enemies = []
         self.particles = []
         self.bullets = []
-
-        new_enemy = enemy.Onion()
-        new_enemy.position = shared.Vector(550, 200)
-        self.enemies.append(new_enemy)
 
     def handle_input(self, event):
         if event.type == pygame.KEYDOWN:
@@ -49,7 +46,17 @@ class Level:
                 self.player.set_direction(0)
 
     def update(self, delta):
-        self.player.update(delta, [platform.get_hitbox() for platform in self.platforms] + [enemy_obj.get_hitbox() for enemy_obj in self.enemies], [enemy_obj.get_hurtbox() for enemy_obj in self.enemies if enemy_obj.is_hurtbox_enabled()])
+        self.player.update(delta, self.platforms + [enemy_obj.get_hitbox() for enemy_obj in self.enemies], [enemy_obj.get_hurtbox() for enemy_obj in self.enemies if enemy_obj.is_hurtbox_enabled()])
+
+        if self.player.position.x - self.camera_offset.x < shared.DISPLAY_WIDTH * 0.4:
+            self.camera_offset.x = self.player.position.x - (shared.DISPLAY_WIDTH * 0.4)
+        elif self.player.position.x - self.camera_offset.x > shared.DISPLAY_WIDTH * 0.6:
+            self.camera_offset.x = self.player.position.x - (shared.DISPLAY_WIDTH * 0.6)
+        if self.camera_offset.x < 0:
+            self.camera_offset.x = 0
+        elif self.camera_offset.x > (len(self.tiles[0]) * shared.TILE_SIZE) - shared.DISPLAY_WIDTH:
+            self.camera_offset.x = (len(self.tiles[0]) * shared.TILE_SIZE) - shared.DISPLAY_WIDTH
+
         self.particles += self.player.get_particles()
         if pygame.key.get_pressed()[pygame.K_l]:
             new_bullet = self.player.shoot()
@@ -57,11 +64,11 @@ class Level:
                 self.bullets.append(new_bullet)
 
         for enemy_obj in self.enemies:
-            enemy_obj.update(delta, self.player.get_hitbox(), [platform.get_hitbox() for platform in self.platforms] + [other_enemy.get_hitbox() for other_enemy in self.enemies if other_enemy is not enemy_obj])
+            enemy_obj.update(delta, self.player.get_hitbox(), self.platforms + [other_enemy.get_hitbox() for other_enemy in self.enemies if other_enemy is not enemy_obj])
 
         for bullet in self.bullets:
             bullet.update(delta)
-            enemy_obj = bullet.check_collisions([platform.get_hitbox() for platform in self.platforms], self.enemies)
+            enemy_obj = bullet.check_collisions(self.platforms, self.enemies)
             if enemy_obj is not None:
                 enemy_obj.take_damage()
                 if not enemy_obj.is_alive():
@@ -82,9 +89,16 @@ class Level:
         return (pos[0] - self.camera_offset.x, pos[1] - self.camera_offset.y)
 
     def render(self, display):
-        for platform in self.platforms:
-            if self.is_on_screen(platform.get_hitbox()):
-                display.blit(platform.get_frame(), platform.position.minus(self.camera_offset).as_tuple())
+        # important assumption being made here: camera position is never negative (otherwise this logic wouldn't work)
+        start_x = int(self.camera_offset.x / shared.TILE_SIZE)
+        y = int(self.camera_offset.y / shared.TILE_SIZE)
+        while (y * shared.TILE_SIZE) - self.camera_offset.y < shared.DISPLAY_HEIGHT:
+            x = start_x
+            while (x * shared.TILE_SIZE) - self.camera_offset.x < shared.DISPLAY_WIDTH:
+                if self.tiles[y][x] != -1:
+                    display.blit(animation.frame_data['tiles'][self.tiles[y][x]], ((x * shared.TILE_SIZE) - self.camera_offset.x, (y * shared.TILE_SIZE) - self.camera_offset.y))
+                x += 1
+            y += 1
 
         display.blit(self.player.get_frame(), self.player.position.minus(self.camera_offset).as_tuple())
 
@@ -110,26 +124,88 @@ class Level:
         outfile.close()
 
     def load_file(self, path):
-        self.platforms = []
-        self.enemies = []
-
         infile = open(path, 'r')
+
+        self.tiles = []
+
+        vegetable_tiles_gid = -1
+        vegetable_chars_gid = -1
+
+        current_layer = None
+        current_firstgid = -1
+        current_y = 0
+
         for line in infile.readlines():
-            line_without_newline_character = line[:len(line) - 1]
-            line_parts = line_without_newline_character.split('=')
-            line_command = line_parts[0]
-            line_arguments = line_parts[1].split(',')
+            line = line.strip()
 
-            if line_command == 'player':
-                self.player.position = shared.Vector(int(line_arguments[0]), int(line_arguments[1]))
-            elif line_command == 'platform':
-                self.platforms.append(Platform(line_arguments[0], int(line_arguments[1]), int(line_arguments[2])))
-            elif line_command == 'enemy':
-                enemy_obj = enemy.Onion()
-                enemy_obj.position = shared.Vector(int(line_arguments[0]), int(line_arguments[1]))
-                self.enemies.append(enemy_obj)
+            if current_layer is not None:
+                if line.startswith('<data'):
+                    continue
+                if line[len(line) - 1] != ',':
+                    current_layer = None
+                else:
+                    line = line[:(len(line) - 1)]
 
+                row = [int(value) - current_firstgid for value in line.split(',')]
+                for x in range(0, len(row)):
+                    if current_layer == 'tiles':
+                        self.tiles[current_y][x] = row[x]
+                    elif current_layer == 'chars':
+                        if row[x] == 0:
+                            self.player.position = shared.Vector(x * 32, current_y * 32)
+                        elif row[x] == 1:
+                            new_enemy = enemy.Onion()
+                            new_enemy.position = shared.Vector(x * 32, current_y * 32)
+                            self.enemies.append(new_enemy)
+                current_y += 1
+
+            data = Level.read_xml_line(line)
+            if data is None:
+                continue
+
+            if data['header'] == 'map':
+                for y in range(0, int(data['height'])):
+                    self.tiles.append([])
+                    for x in range(0, int(data['width'])):
+                        self.tiles[y].append(-1)
+
+            if data['header'] == 'tileset':
+                if data['source'] == 'vegetable_tiles.tsx':
+                    vegetable_tiles_gid = int(data['firstgid'])
+                elif data['source'] == 'vegetable_chars.tsx':
+                    vegetable_chars_gid = int(data['firstgid'])
+
+            if data['header'] == 'layer':
+                current_layer = data['name']
+                if current_layer == 'tiles':
+                    current_firstgid = vegetable_tiles_gid
+                else:
+                    current_firstgid = vegetable_chars_gid
+                current_y = 0
         infile.close()
+
+        self.platforms = [(x * shared.TILE_SIZE, y * shared.TILE_SIZE, shared.TILE_SIZE, shared.TILE_SIZE) for x in range(0, len(self.tiles[0])) for y in range(0, len(self.tiles)) if self.tiles[y][x] != -1]
+
+    def read_xml_line(line):
+        if line.startswith('<?') or line.startswith('</') or not line.startswith('<'):
+            return None
+
+        if line.endswith('/>'):
+            line = line[1:line.index('/>')]
+        else:
+            line = line[1:line.index('>')]
+
+        parts = line.split(' ')
+
+        data = {}
+        data['header'] = parts[0]
+
+        for part in parts[1:]:
+            data_name = part[:part.index('=')]
+            data_value = part[(part.index('"') + 1):(len(part) - 1)]
+            data[data_name] = data_value
+
+        return data
 
 
 class Platform:

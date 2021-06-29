@@ -1,4 +1,5 @@
 import pygame
+import shared
 
 
 # An array of named animation frames
@@ -7,7 +8,7 @@ whitemasked_frame_data = {}
 
 
 # Loads an animation from a given path
-def load(path, frame_count, frame_size, has_alpha=True):
+def load(path, frame_size, has_alpha=True):
     # load animation source sheet
     sprite_sheet = pygame.image.load(path)
     if has_alpha:
@@ -17,6 +18,7 @@ def load(path, frame_count, frame_size, has_alpha=True):
 
     # split source sheet into an array of individual frames
     frames = []
+    frame_count = (sprite_sheet.get_width() / frame_size[0]) * (sprite_sheet.get_height() / frame_size[1])
     frame_x = 0
     frame_y = 0
     while len(frames) != frame_count:
@@ -63,15 +65,16 @@ def load_all():
     global frame_data, whitemasked_frame_data
 
     frame_data = {
-        'player_run': load('./res/player_run.png', 8, (32, 32), True),
-        'player_jump': load('./res/player_jump.png', 3, (32, 32), True),
-        'player_liftoff': load('./res/player_liftoff.png', 6, (32, 32), True),
+        'player_run': load('./res/player_run.png', (32, 32), True),
+        'player_jump': load('./res/player_jump.png', (32, 32), True),
+        'player_liftoff': load('./res/player_liftoff.png', (32, 32), True),
         'bullet': load_static('./res/bullet.png', True),
-        'carrot_run': load('./res/carrot.png', 8, (32, 32), True),
-        'onion_run': load('./res/onion_run.png', 5, (32, 32), True),
-        'onion_attack': load('./res/onion_attack.png', 6, (32, 32), True),
+        'carrot_run': load('./res/carrot.png', (32, 32), True),
+        'onion_run': load('./res/onion_run.png', (32, 32), True),
+        'onion_attack': load('./res/onion_attack.png', (32, 32), True),
         'object_floor': load_static('./res/object_floor.png', False),
-        'object_platform': load_static('./res/object_platform.png', False)
+        'object_platform': load_static('./res/object_platform.png', False),
+        'tiles': load('./res/tileset.png', (shared.TILE_SIZE, shared.TILE_SIZE), False)
     }
 
     whitemasked_frame_data = {
