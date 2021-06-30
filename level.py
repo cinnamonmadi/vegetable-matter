@@ -1,5 +1,5 @@
-import pygame
 import shared
+import input
 import animation
 import player
 import enemy
@@ -20,32 +20,27 @@ class Level:
         self.bullets = []
 
     def handle_input(self, event):
-        if event.type == pygame.KEYDOWN:
-            self.handle_keydown(event)
-        elif event.type == pygame.KEYUP:
-            self.handle_keyup(event)
+        input.handle(event)
 
-    def handle_keydown(self, event):
-        if event.key == pygame.K_a:
+    def update(self, delta):
+        if input.is_just_pressed[input.PLAYER_LEFT]:
             self.player.set_direction(-1)
-        elif event.key == pygame.K_d:
-            self.player.set_direction(1)
-        elif event.key == pygame.K_SPACE:
-            self.player.jump_input_timer = player.Player.JUMP_INPUT_DURATION
-
-    def handle_keyup(self, event):
-        if event.key == pygame.K_a:
-            if pygame.key.get_pressed()[pygame.K_d]:
+        elif input.is_just_released[input.PLAYER_LEFT]:
+            if input.is_pressed[input.PLAYER_RIGHT]:
                 self.player.set_direction(1)
             else:
                 self.player.set_direction(0)
-        elif event.key == pygame.K_d:
-            if pygame.key.get_pressed()[pygame.K_a]:
+        if input.is_just_pressed[input.PLAYER_RIGHT]:
+            self.player.set_direction(1)
+        elif input.is_just_released[input.PLAYER_RIGHT]:
+            if input.is_pressed[input.PLAYER_LEFT]:
                 self.player.set_direction(-1)
             else:
                 self.player.set_direction(0)
 
-    def update(self, delta):
+        if input.is_just_pressed[input.PLAYER_JUMP]:
+            self.player.jump_input_timer = player.Player.JUMP_INPUT_DURATION
+
         self.player.update(delta, self.platforms + [enemy_obj.get_hitbox() for enemy_obj in self.enemies], [enemy_obj.get_hurtbox() for enemy_obj in self.enemies if enemy_obj.is_hurtbox_enabled()])
 
         if self.player.position.x - self.camera_offset.x < shared.DISPLAY_WIDTH * 0.4:
@@ -58,7 +53,7 @@ class Level:
             self.camera_offset.x = (len(self.tiles[0]) * shared.TILE_SIZE) - shared.DISPLAY_WIDTH
 
         self.particles += self.player.get_particles()
-        if pygame.key.get_pressed()[pygame.K_l]:
+        if input.is_pressed[input.PLAYER_SHOOT]:
             new_bullet = self.player.shoot()
             if new_bullet is not None:
                 self.bullets.append(new_bullet)
@@ -78,6 +73,8 @@ class Level:
         for particle in self.particles:
             particle[0].update(delta)
         self.particles = [particle for particle in self.particles if not particle[0].finished]
+
+        input.flush_events()
 
     def is_on_screen(self, rect):
         return shared.is_rect_collision(rect, self.camera_offset.as_tuple() + (shared.DISPLAY_WIDTH, shared.DISPLAY_HEIGHT))

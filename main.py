@@ -2,6 +2,7 @@ import pygame
 import os
 import sys
 import shared
+import input
 import animation
 import level
 import animviewer
@@ -125,4 +126,5 @@ class Game:
 
 if __name__ == "__main__":
     game = Game()
+    input.reset_to_defaults()
     game.loop()
