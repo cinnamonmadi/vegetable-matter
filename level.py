@@ -19,6 +19,9 @@ class Level:
         self.particles = []
         self.bullets = []
 
+    def on_resume(self):
+        input.reset_all()
+
     def handle_input(self, event):
         input.handle(event)
 

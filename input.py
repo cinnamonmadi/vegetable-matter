@@ -25,6 +25,13 @@ def reset_to_defaults():
     }
 
 
+def reset_all():
+    global is_pressed
+
+    is_pressed = [False] * len(is_pressed)
+    flush_events()
+
+
 def flush_events():
     global is_just_pressed, is_just_released
 

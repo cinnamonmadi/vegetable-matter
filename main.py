@@ -7,6 +7,7 @@ import animation
 import level
 import animviewer
 import editor
+import pause
 
 
 # Class for the main game. Contains game loop and rendering code
@@ -45,6 +46,7 @@ class Game:
 
         self.read_sys_args()
 
+        self.pause_state = pause.Pause((Game.SCREEN_WIDTH, Game.SCREEN_HEIGHT))
         self.running = False
 
     # Read and handle system arguments
@@ -73,15 +75,31 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                     self.running = False
+                elif not self.pause_state.is_active and event.type == pygame.KEYDOWN and event.key == pygame.K_q:
+                    if not self.pause_state.is_active:
+                        self.pause_state.set_active(self.current_state)
                 else:
-                    self.current_state.handle_input(event)
+                    if self.pause_state.is_active:
+                        self.pause_state.handle_input(event)
+                        if not self.pause_state.is_active:
+                            self.current_state.on_resume()
+                        if self.pause_state.request_quit:
+                            self.running = False
+                    else:
+                        self.current_state.handle_input(event)
 
             # Update
-            self.current_state.update(self.delta)
+            if self.pause_state.is_active:
+                self.pause_state.update(self.delta)
+            else:
+                self.current_state.update(self.delta)
 
             # Render
             self.render_clear()
-            self.current_state.render(self.display)
+            if self.pause_state.is_active:
+                self.pause_state.render(self.display)
+            else:
+                self.current_state.render(self.display)
             self.render_fps()
             self.render_flip()
 

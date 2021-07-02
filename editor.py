@@ -24,6 +24,9 @@ class Editor:
     def snap_to_grid(self, pos):
         return (int(pos[0] / self.grid_size) * self.grid_size, int(pos[1] / self.grid_size) * self.grid_size)
 
+    def on_resume(self):
+        pass
+
     def handle_input(self, event):
         if event.type == pygame.MOUSEMOTION:
             self.handle_mousemovement(event)

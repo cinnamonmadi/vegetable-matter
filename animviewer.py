@@ -18,6 +18,9 @@ class AnimViewer:
 
         self.font = pygame.font.Font('./res/hack.ttf', 10)
 
+    def on_resume(self):
+        pass
+
     def handle_input(self, event):
         if event.type == pygame.KEYDOWN:
             self.handle_keydown(event)
