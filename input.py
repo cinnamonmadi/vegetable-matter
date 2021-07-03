@@ -12,6 +12,9 @@ is_just_released = [False] * 4
 current_joystick = -1
 keymapping = {}
 
+pygame.joystick.init()
+joysticks = [pygame.joystick.Joystick(i) for i in range(0, pygame.joystick.get_count())]
+
 
 def reset_to_defaults():
     global current_joystick, keymapping
@@ -50,3 +53,5 @@ def handle(event):
         if event.key in keymapping[-1].keys():
             is_pressed[keymapping[-1][event.key]] = False
             is_just_released[keymapping[-1][event.key]] = True
+    elif event.type == pygame.JOYBUTTONDOWN:
+        print(event.button)
