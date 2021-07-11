@@ -67,19 +67,20 @@ def load_all():
     frame_data = {
         'player_run': load('./res/player_run.png', (32, 32), True),
         'player_jump': load('./res/player_jump.png', (32, 32), True),
+        'player_hurt': load_static('./res/player_hurt.png', True),
         'player_liftoff': load('./res/player_liftoff.png', (32, 32), True),
         'bullet': load_static('./res/bullet.png', True),
         'carrot_run': load('./res/carrot.png', (32, 32), True),
         'onion_run': load('./res/onion_run.png', (32, 32), True),
         'onion_attack': load('./res/onion_attack.png', (32, 32), True),
+        'onion_death': load('./res/onion_death.png', (64, 64), True),
         'object_floor': load_static('./res/object_floor.png', False),
         'object_platform': load_static('./res/object_platform.png', False),
         'tiles': load('./res/tileset.png', (shared.TILE_SIZE, shared.TILE_SIZE), False)
     }
 
     whitemasked_frame_data = {
-        'player_run': generate_whitemask(frame_data['player_run']),
-        'player_jump': generate_whitemask(frame_data['player_jump']),
+        'player_hurt': generate_whitemask(frame_data['player_hurt']),
         'onion_run': generate_whitemask(frame_data['onion_run']),
         'onion_attack': generate_whitemask(frame_data['onion_attack'])
     }

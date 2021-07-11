@@ -8,7 +8,7 @@ class Onion:
     GRAVITY = 0.1
     MAX_FALL_SPEED = 3
     PLAYER_SEARCH_RADIUS = 200
-    MAX_HEALTH = 20
+    MAX_HEALTH = 10
     INVULN_DURATION = 5
 
     def __init__(self):

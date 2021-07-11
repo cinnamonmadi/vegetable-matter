@@ -70,6 +70,9 @@ class Level:
             if enemy_obj is not None:
                 enemy_obj.take_damage()
                 if not enemy_obj.is_alive():
+                    self.particles.append((animation.Animation('onion_death', 13), enemy_obj.position.minus(shared.Vector(18, 32)).as_tuple()))
+                    if enemy_obj.run_animation.flip_h:
+                        self.particles[len(self.particles) - 1][0].flip_h = True
                     self.enemies.remove(enemy_obj)
         self.bullets = [bullet for bullet in self.bullets if not bullet.delete_me]
 
@@ -152,10 +155,10 @@ class Level:
                         self.tiles[current_y][x] = row[x]
                     elif current_layer == 'chars':
                         if row[x] == 0:
-                            self.player.position = shared.Vector(x * 32, current_y * 32)
+                            self.player.position = shared.Vector(x * shared.TILE_SIZE, current_y * shared.TILE_SIZE)
                         elif row[x] == 1:
                             new_enemy = enemy.Onion()
-                            new_enemy.position = shared.Vector(x * 32, current_y * 32)
+                            new_enemy.position = shared.Vector(x * shared.TILE_SIZE, current_y * shared.TILE_SIZE)
                             self.enemies.append(new_enemy)
                 current_y += 1
 
@@ -170,9 +173,9 @@ class Level:
                         self.tiles[y].append(-1)
 
             if data['header'] == 'tileset':
-                if data['source'] == 'vegetable_tiles.tsx':
+                if data['source'] == 'tiles.tsx':
                     vegetable_tiles_gid = int(data['firstgid'])
-                elif data['source'] == 'vegetable_chars.tsx':
+                elif data['source'] == 'chars.tsx':
                     vegetable_chars_gid = int(data['firstgid'])
 
             if data['header'] == 'layer':
@@ -184,7 +187,20 @@ class Level:
                 current_y = 0
         infile.close()
 
-        self.platforms = [(x * shared.TILE_SIZE, y * shared.TILE_SIZE, shared.TILE_SIZE, shared.TILE_SIZE) for x in range(0, len(self.tiles[0])) for y in range(0, len(self.tiles)) if self.tiles[y][x] != -1]
+        self.platforms = [(x * shared.TILE_SIZE, y * shared.TILE_SIZE, shared.TILE_SIZE, shared.TILE_SIZE) for x in range(0, len(self.tiles[0])) for y in range(0, len(self.tiles)) if self.tile_breathes(x, y)]
+
+    def tile_breathes(self, x, y):
+        if self.tiles[y][x] == -1:
+            return False
+
+        adjacents = [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
+        for adjacent in adjacents:
+            if adjacent[0] < 0 or adjacent[0] >= len(self.tiles[0]) or adjacent[1] < 0 or adjacent[1] >= len(self.tiles):
+                continue
+            if self.tiles[adjacent[1]][adjacent[0]] == -1:
+                return True
+
+        return False
 
     def read_xml_line(line):
         if line.startswith('<?') or line.startswith('</') or not line.startswith('<'):
@@ -206,15 +222,3 @@ class Level:
             data[data_name] = data_value
 
         return data
-
-
-class Platform:
-    def __init__(self, name, x, y):
-        self.position = shared.Vector(x, y)
-        self.name = name
-
-    def get_frame(self):
-        return animation.frame_data[self.name][0]
-
-    def get_hitbox(self):
-        return self.position.as_tuple() + self.get_frame().get_size()

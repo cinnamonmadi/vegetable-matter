@@ -23,6 +23,8 @@ class Player:
 
         self.run_animation = animation.Animation('player_run', 11)
         self.jump_animation = animation.Animation('player_jump', 1)
+        self.hurt_animation = animation.Animation('player_hurt', 1)
+        self.hurt_animation.whitemask = True
 
         self.size = self.run_animation.get_frame().get_size()
         self.hitbox_offset = shared.Vector(9, 11)
@@ -48,9 +50,11 @@ class Player:
         if self.run_animation.flip_h and direction == 1:
             self.run_animation.flip_h = False
             self.jump_animation.flip_h = False
+            self.hurt_animation.flip_h = False
         elif not self.run_animation.flip_h and direction == -1:
             self.run_animation.flip_h = True
             self.jump_animation.flip_h = True
+            self.hurt_animation.flip_h = True
         self.direction = direction
 
     def jump(self):
@@ -105,13 +109,6 @@ class Player:
         if self.invuln_timer < 0:
             self.invuln_timer = 0
 
-        if self.knockback_on:
-            self.run_animation.whitemask = True
-            self.jump_animation.whitemask = True
-        else:
-            self.run_animation.whitemask = False
-            self.jump_animation.whitemask = False
-
         if not self.grounded or self.direction == 0:
             self.run_animation.reset()
         else:
@@ -140,7 +137,9 @@ class Player:
                         self.grounded = True
 
     def get_frame(self):
-        if self.grounded:
+        if self.knockback_on:
+            return self.hurt_animation.get_frame()
+        elif self.grounded:
             return self.run_animation.get_frame()
         else:
             if abs(self.velocity.y) < 0.5:
