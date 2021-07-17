@@ -1,5 +1,4 @@
 import pygame
-import shared
 
 
 # An array of named animation frames
@@ -76,7 +75,7 @@ def load_all():
         'onion_death': load('./res/gfx/onion_death.png', (64, 64), True),
         'object_floor': load_static('./res/gfx/object_floor.png', False),
         'object_platform': load_static('./res/gfx/object_platform.png', False),
-        'tiles': load('./res/gfx/tileset.png', (shared.TILE_SIZE, shared.TILE_SIZE), False)
+        'level': load_static('./res/gfx/map.png', False)
     }
 
     whitemasked_frame_data = {

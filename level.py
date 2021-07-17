@@ -1,3 +1,5 @@
+import pygame
+import os
 import shared
 import input
 import animation
@@ -10,9 +12,11 @@ class Level:
     def __init__(self):
         self.player = player.Player()
 
+        self.width = 0
+        self.height = 0
+        self.background = None
         self.camera_offset = shared.Vector.ZERO()
 
-        self.tiles = []
         self.platforms = []
 
         self.enemies = []
@@ -51,20 +55,20 @@ class Level:
         elif self.player.position.x - self.camera_offset.x > shared.DISPLAY_WIDTH * 0.6:
             self.camera_offset.x = self.player.position.x - (shared.DISPLAY_WIDTH * 0.6)
 
-        if self.player.position.y - self.camera_offset.y < shared.DISPLAY_HEIGHT * 0.4:
-            self.camera_offset.y = self.player.position.y - (shared.DISPLAY_HEIGHT * 0.4)
-        elif self.player.position.y - self.camera_offset.y > shared.DISPLAY_HEIGHT * 0.6:
-            self.camera_offset.y = self.player.position.y - (shared.DISPLAY_HEIGHT * 0.6)
+        # if self.player.position.y - self.camera_offset.y < shared.DISPLAY_HEIGHT * 0.4:
+            # self.camera_offset.y = self.player.position.y - (shared.DISPLAY_HEIGHT * 0.4)
+        # elif self.player.position.y - self.camera_offset.y > shared.DISPLAY_HEIGHT * 0.6:
+            # self.camera_offset.y = self.player.position.y - (shared.DISPLAY_HEIGHT * 0.6)
 
         if self.camera_offset.x < 0:
             self.camera_offset.x = 0
-        elif self.camera_offset.x > (len(self.tiles[0]) * shared.TILE_SIZE) - shared.DISPLAY_WIDTH:
-            self.camera_offset.x = (len(self.tiles[0]) * shared.TILE_SIZE) - shared.DISPLAY_WIDTH
+        elif self.camera_offset.x > 2560 - shared.DISPLAY_WIDTH:
+            self.camera_offset.x = 2560 - shared.DISPLAY_WIDTH
 
-        if self.camera_offset.y < 0:
-            self.camera_offset.y = 0
-        elif self.camera_offset.y > (len(self.tiles) * shared.TILE_SIZE) - shared.DISPLAY_HEIGHT:
-            self.camera_offset.y = (len(self.tiles) * shared.TILE_SIZE) - shared.DISPLAY_HEIGHT
+        # if self.camera_offset.y < 0:
+            # self.camera_offset.y = 0
+        # elif self.camera_offset.y > 640 - shared.DISPLAY_HEIGHT:
+            # self.camera_offset.y = 640 - shared.DISPLAY_HEIGHT
 
         self.particles += self.player.get_particles()
         if input.is_pressed[input.PLAYER_SHOOT]:
@@ -103,17 +107,10 @@ class Level:
         return (pos[0] - self.camera_offset.x, pos[1] - self.camera_offset.y)
 
     def render(self, display):
-        # important assumption being made here: camera position is never negative (otherwise this logic wouldn't work)
-        start_x = int(self.camera_offset.x / shared.TILE_SIZE)
-        y = int(self.camera_offset.y / shared.TILE_SIZE)
-        while (y * shared.TILE_SIZE) - self.camera_offset.y < shared.DISPLAY_HEIGHT:
-            x = start_x
-            while (x * shared.TILE_SIZE) - self.camera_offset.x < shared.DISPLAY_WIDTH:
-                if self.tiles[y][x] != -1:
-                    display.blit(animation.frame_data['tiles'][self.tiles[y][x]], ((x * shared.TILE_SIZE) - self.camera_offset.x, (y * shared.TILE_SIZE) - self.camera_offset.y))
-                x += 1
-            y += 1
-
+        display.blit(animation.frame_data['level'][0], shared.Vector.ZERO().minus(self.camera_offset).as_tuple())
+        for platform in self.platforms:
+            platform_rect = shared.Vector(platform[0], platform[1]).minus(self.camera_offset).as_tuple() + platform[2:]
+            pygame.draw.rect(display, shared.Color.RED, platform_rect, False)
         display.blit(self.player.get_frame(), self.player.position.minus(self.camera_offset).as_tuple())
 
         for enemy_obj in self.enemies:
@@ -128,108 +125,79 @@ class Level:
             if self.is_on_screen(particle[1] + particle[0].get_frame().get_size()):
                 display.blit(particle[0].get_frame(), self.camera_offset_pos(particle[1]))
 
-    def save_as(self, path):
-        outfile = open(path, 'w')
-        outfile.write('player=' + self.player.position.as_string() + '\n')
-        for platform in self.platforms:
-            outfile.write('platform=' + platform.name + ',' + platform.position.as_string() + '\n')
-        for enemy_obj in self.enemies:
-            outfile.write('enemy=' + enemy_obj.position.as_string() + '\n')
-        outfile.close()
-
     def load_file(self, path):
-        infile = open(path, 'r')
+        if not os.path.exists(path):
+            self.gen_mapfile(path)
 
-        self.tiles = []
+        self.player.position = shared.Vector(32, 32)
+        self.enemies = []
+        self.platforms = []
 
-        vegetable_tiles_gid = -1
-        vegetable_chars_gid = -1
+        mapfile = open(path, 'r')
+        for line in mapfile.readlines():
+            command, value = line.split('=')
+            if command == 'size':
+                self.width, self.height = [int(num) for num in value.split(',')]
+            elif command == 'platform':
+                self.platforms.append(tuple([int(num) for num in value.split(',')]))
+        mapfile.close()
 
-        current_layer = None
-        current_firstgid = -1
-        current_y = 0
+    def gen_mapfile(self, path):
+        map_image_path = 'res/gfx/' + path[path.index('/') + 1:path.index('.')] + '.png'
+        print(map_image_path)
+        map_frame = pygame.image.load(map_image_path)
+        map_frame.convert()
 
-        for line in infile.readlines():
-            line = line.strip()
+        tiles = []
+        for x in range(0, map_frame.get_width()):
+            tiles.append([])
+            for y in range(0, map_frame.get_height()):
+                color = map_frame.get_at((x, y))
+                tiles[x].append(color.r == 0 and color.g == 0 and color.b == 0)
 
-            if current_layer is not None:
-                if line.startswith('<data'):
+        breathing_tiles = []
+        for x in range(0, map_frame.get_width()):
+            breathing_tiles.append([])
+            for y in range(0, map_frame.get_height()):
+                if not tiles[x][y]:
+                    breathing_tiles[x].append(False)
                     continue
-                if line[len(line) - 1] != ',':
-                    current_layer = None
-                else:
-                    line = line[:(len(line) - 1)]
+                is_breathing = False
+                adjacents = [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
+                for adjacent in adjacents:
+                    if adjacent[0] < 0 or adjacent[0] >= map_frame.get_width() or adjacent[1] < 0 or adjacent[1] >= map_frame.get_height():
+                        continue
+                    if not tiles[adjacent[0]][adjacent[1]]:
+                        is_breathing = True
+                        break
+                breathing_tiles[x].append(is_breathing)
 
-                row = [int(value) - current_firstgid for value in line.split(',')]
-                for x in range(0, len(row)):
-                    if current_layer == 'tiles':
-                        self.tiles[current_y][x] = row[x]
-                    elif current_layer == 'chars':
-                        if row[x] == 0:
-                            self.player.position = shared.Vector(x * shared.TILE_SIZE, current_y * shared.TILE_SIZE)
-                        elif row[x] == 1:
-                            new_enemy = enemy.Onion()
-                            new_enemy.position = shared.Vector(x * shared.TILE_SIZE, current_y * shared.TILE_SIZE)
-                            self.enemies.append(new_enemy)
-                current_y += 1
+        platforms = []
+        for x in range(0, map_frame.get_width()):
+            for y in range(0, map_frame.get_height()):
+                if breathing_tiles[x][y]:
+                    new_x = x
+                    curr_x = x
+                    while breathing_tiles[curr_x][y]:
+                        breathing_tiles[curr_x][y] = False
+                        curr_x += 1
+                    new_width = curr_x - new_x
+                    platforms.append((new_x, y, new_width, 1))
 
-            data = Level.read_xml_line(line)
-            if data is None:
-                continue
+        for y in range(0, map_frame.get_height()):
+            for x in range(0, map_frame.get_width()):
+                if breathing_tiles[x][y]:
+                    new_y = y
+                    curr_y = y
+                    while breathing_tiles[x][curr_y]:
+                        breathing_tiles[x][curr_y] = False
+                        curr_y += 1
+                    new_height = curr_y - new_y
+                    platforms.append((x, new_y, 1, new_height))
 
-            if data['header'] == 'map':
-                for y in range(0, int(data['height'])):
-                    self.tiles.append([])
-                    for x in range(0, int(data['width'])):
-                        self.tiles[y].append(-1)
 
-            if data['header'] == 'tileset':
-                if data['source'] == 'tiles.tsx':
-                    vegetable_tiles_gid = int(data['firstgid'])
-                elif data['source'] == 'chars.tsx':
-                    vegetable_chars_gid = int(data['firstgid'])
-
-            if data['header'] == 'layer':
-                current_layer = data['name']
-                if current_layer == 'tiles':
-                    current_firstgid = vegetable_tiles_gid
-                else:
-                    current_firstgid = vegetable_chars_gid
-                current_y = 0
-        infile.close()
-
-        self.platforms = [(x * shared.TILE_SIZE, y * shared.TILE_SIZE, shared.TILE_SIZE, shared.TILE_SIZE) for x in range(0, len(self.tiles[0])) for y in range(0, len(self.tiles)) if self.tile_breathes(x, y)]
-
-    def tile_breathes(self, x, y):
-        if self.tiles[y][x] == -1:
-            return False
-
-        adjacents = [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
-        for adjacent in adjacents:
-            if adjacent[0] < 0 or adjacent[0] >= len(self.tiles[0]) or adjacent[1] < 0 or adjacent[1] >= len(self.tiles):
-                continue
-            if self.tiles[adjacent[1]][adjacent[0]] == -1:
-                return True
-
-        return False
-
-    def read_xml_line(line):
-        if line.startswith('<?') or line.startswith('</') or not line.startswith('<'):
-            return None
-
-        if line.endswith('/>'):
-            line = line[1:line.index('/>')]
-        else:
-            line = line[1:line.index('>')]
-
-        parts = line.split(' ')
-
-        data = {}
-        data['header'] = parts[0]
-
-        for part in parts[1:]:
-            data_name = part[:part.index('=')]
-            data_value = part[(part.index('"') + 1):(len(part) - 1)]
-            data[data_name] = data_value
-
-        return data
+        outfile = open(path, 'w')
+        outfile.write('size=' + str(map_frame.get_width()) + ',' + str(map_frame.get_height()) + '\n')
+        for platform in platforms:
+            outfile.write('platform=' + ','.join([str(value) for value in platform]) + '\n')
+        outfile.close()

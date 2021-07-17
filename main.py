@@ -69,6 +69,7 @@ class Game:
     def loop(self):
         if self.current_state is None:
             self.current_state = level.Level()
+            self.current_state.load_file('map/map.txt')
 
         self.running = True
         self.before_time = pygame.time.get_ticks()
@@ -114,7 +115,7 @@ class Game:
     # Will center text if the x or y coordinate on that axis is -1
     # A new font will be loaded if a font of the given size doesn't exist
     def render_fps(self):
-        to_render = self.debug_font.render("FPS: " + str(self.fps), False, shared.Color.WHITE)
+        to_render = self.debug_font.render("FPS: " + str(self.fps), False, shared.Color.YELLOW)
         self.display.blit(to_render, (0, 0))
 
     # Clears the display buffer

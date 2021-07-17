@@ -29,7 +29,7 @@ class Player:
 
         self.size = self.run_animation.get_frame().get_size()
         self.hitbox_offset = shared.Vector(9, 11)
-        self.hitbox_size = (14, 21)
+        self.hitbox_size = (14, 20)
         self.direction = 0
         self.grounded = False
         self.jump_input_timer = 0
