@@ -8,6 +8,7 @@ import level
 import animviewer
 import editor
 import pause
+import sound
 
 
 # Class for the main game. Contains game loop and rendering code
@@ -40,6 +41,9 @@ class Game:
         # Init fonts
         pygame.font.init()
         self.debug_font = pygame.font.Font('./res/hack.ttf', 10)
+
+        pygame.mixer.init()
+        sound.load_all()
 
         # Init animations
         animation.load_all()

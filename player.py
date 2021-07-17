@@ -1,5 +1,6 @@
 import shared
 import animation
+import sound
 
 
 # Class for the player character
@@ -63,6 +64,7 @@ class Player:
             self.grounded = False
             self.coyote_timer = 0
             self.particles.append((animation.Animation('player_liftoff', 11), self.position.as_tuple()))
+            sound.play('player_jump')
 
     def update(self, delta, platforms, hurtboxes):
         if self.invuln_timer == 0 and self.direction != 0:
@@ -173,6 +175,9 @@ class Player:
             new_bullet.position.x += 15
             new_bullet.velocity = shared.Vector(Bullet.SPEED, 0)
         self.shoot_timer = Player.SHOT_DELAY
+
+        sound.play('player_shoot')
+
         return new_bullet
 
 
