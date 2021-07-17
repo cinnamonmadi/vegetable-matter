@@ -50,10 +50,21 @@ class Level:
             self.camera_offset.x = self.player.position.x - (shared.DISPLAY_WIDTH * 0.4)
         elif self.player.position.x - self.camera_offset.x > shared.DISPLAY_WIDTH * 0.6:
             self.camera_offset.x = self.player.position.x - (shared.DISPLAY_WIDTH * 0.6)
+
+        if self.player.position.y - self.camera_offset.y < shared.DISPLAY_HEIGHT * 0.4:
+            self.camera_offset.y = self.player.position.y - (shared.DISPLAY_HEIGHT * 0.4)
+        elif self.player.position.y - self.camera_offset.y > shared.DISPLAY_HEIGHT * 0.6:
+            self.camera_offset.y = self.player.position.y - (shared.DISPLAY_HEIGHT * 0.6)
+
         if self.camera_offset.x < 0:
             self.camera_offset.x = 0
         elif self.camera_offset.x > (len(self.tiles[0]) * shared.TILE_SIZE) - shared.DISPLAY_WIDTH:
             self.camera_offset.x = (len(self.tiles[0]) * shared.TILE_SIZE) - shared.DISPLAY_WIDTH
+
+        if self.camera_offset.y < 0:
+            self.camera_offset.y = 0
+        elif self.camera_offset.y > (len(self.tiles) * shared.TILE_SIZE) - shared.DISPLAY_HEIGHT:
+            self.camera_offset.y = (len(self.tiles) * shared.TILE_SIZE) - shared.DISPLAY_HEIGHT
 
         self.particles += self.player.get_particles()
         if input.is_pressed[input.PLAYER_SHOOT]:
@@ -70,7 +81,7 @@ class Level:
             if enemy_obj is not None:
                 enemy_obj.take_damage()
                 if not enemy_obj.is_alive():
-                    self.particles.append((animation.Animation('onion_death', 13), enemy_obj.position.minus(shared.Vector(18, 32)).as_tuple()))
+                    self.particles.append((animation.Animation('onion_death', 10), enemy_obj.position.minus(shared.Vector(18, 32)).as_tuple()))
                     if enemy_obj.run_animation.flip_h:
                         self.particles[len(self.particles) - 1][0].flip_h = True
                     self.enemies.remove(enemy_obj)

@@ -3,7 +3,7 @@ import math
 
 DISPLAY_WIDTH = 640
 DISPLAY_HEIGHT = 360
-TILE_SIZE = 16
+TILE_SIZE = 32
 
 
 class Color:
