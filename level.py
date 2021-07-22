@@ -20,6 +20,7 @@ class Level:
         self.platforms = []
 
         self.enemies = []
+        self.enemy_projectiles = []
         self.particles = []
         self.bullets = []
 
@@ -30,6 +31,57 @@ class Level:
         input.handle(event)
 
     def update(self, delta):
+        self.update_player_direction()
+        self.update_player_jump()
+        self.update_player_shoot()
+        self.player.update(delta, self.platforms + [enemy_obj.get_hitbox() for enemy_obj in self.enemies], [enemy_obj.get_hurtbox() for enemy_obj in self.enemies if enemy_obj.is_hurtbox_enabled()] + [projectile.get_hitbox() for projectile in self.enemy_projectiles])
+        self.update_camera()
+        self.particles += self.player.get_particles()
+        self.update_player_shoot()
+
+        player_hitbox = self.player.get_hitbox()
+        player_center = self.player.position.sum_with(shared.Vector(self.player.hitbox_size[0] / 2, self.player.hitbox_size[1] / 2))
+
+        for enemy_obj in self.enemies:
+            enemy_obj.update(delta, player_center, player_hitbox, self.platforms + [other_enemy.get_hitbox() for other_enemy in self.enemies if other_enemy is not enemy_obj])
+            if enemy_obj.is_hurtbox_enabled():
+                enemy_hurtbox = enemy_obj.get_hurtbox()
+                if shared.is_rect_collision(player_hitbox, enemy_hurtbox):
+                    self.player.take_damage(enemy_hurtbox, 0)
+            if enemy_obj.has_projectile:
+                self.enemy_projectiles.append(enemy_obj.get_projectile(player_center))
+
+        for bullet in self.bullets:
+            bullet.update(delta)
+            attackable = bullet.check_collisions(self.platforms, self.enemies + self.enemy_projectiles)
+            if attackable is not None:
+                attackable.take_damage()
+
+        dead_enemies = [enemy_obj for enemy_obj in self.enemies if not enemy_obj.is_alive()]
+        for dead_enemy in dead_enemies:
+            death_particle = dead_enemy.get_death_particle()
+            if death_particle is not None:
+                self.particles.append(death_particle)
+            self.enemies.remove(dead_enemy)
+
+        self.bullets = [bullet for bullet in self.bullets if not bullet.delete_me]
+
+        for projectile in self.enemy_projectiles:
+            projectile.update(delta, self.platforms)
+            projectile_hitbox = projectile.get_hitbox()
+            if not projectile.delete_me and shared.is_rect_collision(projectile_hitbox, player_hitbox):
+                projectile.delete_me = True
+                self.player.take_damage(projectile_hitbox, 0)
+
+        self.enemy_projectiles = [projectile for projectile in self.enemy_projectiles if not projectile.delete_me]
+
+        for particle in self.particles:
+            particle[0].update(delta)
+        self.particles = [particle for particle in self.particles if not particle[0].finished]
+
+        input.flush_events()
+
+    def update_player_direction(self):
         if input.is_just_pressed[input.PLAYER_LEFT]:
             self.player.set_direction(-1)
         elif input.is_just_released[input.PLAYER_LEFT]:
@@ -45,57 +97,26 @@ class Level:
             else:
                 self.player.set_direction(0)
 
+    def update_player_jump(self):
         if input.is_just_pressed[input.PLAYER_JUMP]:
             self.player.jump_input_timer = player.Player.JUMP_INPUT_DURATION
 
-        self.player.update(delta, self.platforms + [enemy_obj.get_hitbox() for enemy_obj in self.enemies], [enemy_obj.get_hurtbox() for enemy_obj in self.enemies if enemy_obj.is_hurtbox_enabled()])
+    def update_player_shoot(self):
+        if input.is_just_pressed[input.PLAYER_SHOOT]:
+            new_bullet = self.player.shoot()
+            if new_bullet is not None:
+                self.bullets.append(new_bullet)
 
+    def update_camera(self):
         if self.player.position.x - self.camera_offset.x < shared.DISPLAY_WIDTH * 0.4:
             self.camera_offset.x = self.player.position.x - (shared.DISPLAY_WIDTH * 0.4)
         elif self.player.position.x - self.camera_offset.x > shared.DISPLAY_WIDTH * 0.6:
             self.camera_offset.x = self.player.position.x - (shared.DISPLAY_WIDTH * 0.6)
 
-        # if self.player.position.y - self.camera_offset.y < shared.DISPLAY_HEIGHT * 0.4:
-            # self.camera_offset.y = self.player.position.y - (shared.DISPLAY_HEIGHT * 0.4)
-        # elif self.player.position.y - self.camera_offset.y > shared.DISPLAY_HEIGHT * 0.6:
-            # self.camera_offset.y = self.player.position.y - (shared.DISPLAY_HEIGHT * 0.6)
-
         if self.camera_offset.x < 0:
             self.camera_offset.x = 0
         elif self.camera_offset.x > 2560 - shared.DISPLAY_WIDTH:
             self.camera_offset.x = 2560 - shared.DISPLAY_WIDTH
-
-        # if self.camera_offset.y < 0:
-            # self.camera_offset.y = 0
-        # elif self.camera_offset.y > 640 - shared.DISPLAY_HEIGHT:
-            # self.camera_offset.y = 640 - shared.DISPLAY_HEIGHT
-
-        self.particles += self.player.get_particles()
-        if input.is_pressed[input.PLAYER_SHOOT]:
-            new_bullet = self.player.shoot()
-            if new_bullet is not None:
-                self.bullets.append(new_bullet)
-
-        for enemy_obj in self.enemies:
-            enemy_obj.update(delta, self.player.get_hitbox(), self.platforms + [other_enemy.get_hitbox() for other_enemy in self.enemies if other_enemy is not enemy_obj])
-
-        for bullet in self.bullets:
-            bullet.update(delta)
-            enemy_obj = bullet.check_collisions(self.platforms, self.enemies)
-            if enemy_obj is not None:
-                enemy_obj.take_damage()
-                if not enemy_obj.is_alive():
-                    self.particles.append((animation.Animation('onion_death', 10), enemy_obj.position.minus(shared.Vector(18, 32)).as_tuple()))
-                    if enemy_obj.run_animation.flip_h:
-                        self.particles[len(self.particles) - 1][0].flip_h = True
-                    self.enemies.remove(enemy_obj)
-        self.bullets = [bullet for bullet in self.bullets if not bullet.delete_me]
-
-        for particle in self.particles:
-            particle[0].update(delta)
-        self.particles = [particle for particle in self.particles if not particle[0].finished]
-
-        input.flush_events()
 
     def is_on_screen(self, rect):
         return shared.is_rect_collision(rect, self.camera_offset.as_tuple() + (shared.DISPLAY_WIDTH, shared.DISPLAY_HEIGHT))
@@ -121,6 +142,10 @@ class Level:
             if self.is_on_screen(bullet.get_frame_rect()):
                 display.blit(bullet.get_frame(), bullet.position.minus(self.camera_offset).as_tuple())
 
+        for projectile in self.enemy_projectiles:
+            if self.is_on_screen(projectile.get_frame_rect()):
+                display.blit(projectile.get_frame(), projectile.position.minus(self.camera_offset).as_tuple())
+
         for particle in self.particles:
             if self.is_on_screen(particle[1] + particle[0].get_frame().get_size()):
                 display.blit(particle[0].get_frame(), self.camera_offset_pos(particle[1]))
@@ -129,8 +154,9 @@ class Level:
         if not os.path.exists(path):
             self.gen_mapfile(path)
 
-        self.player.position = shared.Vector(32, 32)
-        self.enemies = []
+        self.player.position = shared.Vector(32, 232)
+        self.enemies = [enemy.Tomato()]
+        self.enemies[0].position = shared.Vector(128, 232)
         self.platforms = []
 
         mapfile = open(path, 'r')
@@ -141,6 +167,11 @@ class Level:
             elif command == 'platform':
                 self.platforms.append(tuple([int(num) for num in value.split(',')]))
         mapfile.close()
+
+        self.platforms.append((0, 0, 1, self.height))
+        self.platforms.append((self.width - 1, 0, 1, self.height))
+        self.platforms.append((0, 0, self.width, 1))
+        self.platforms.append((0, self.height - 1, self.width, 1))
 
     def gen_mapfile(self, path):
         map_image_path = 'res/gfx/' + path[path.index('/') + 1:path.index('.')] + '.png'
@@ -194,7 +225,6 @@ class Level:
                         curr_y += 1
                     new_height = curr_y - new_y
                     platforms.append((x, new_y, 1, new_height))
-
 
         outfile = open(path, 'w')
         outfile.write('size=' + str(map_frame.get_width()) + ',' + str(map_frame.get_height()) + '\n')

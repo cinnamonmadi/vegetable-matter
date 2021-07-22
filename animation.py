@@ -73,16 +73,15 @@ def load_all():
         'onion_run': load('./res/gfx/onion_run.png', (32, 32), True),
         'onion_attack': load('./res/gfx/onion_attack.png', (32, 32), True),
         'onion_death': load('./res/gfx/onion_death.png', (64, 64), True),
-        'object_floor': load_static('./res/gfx/object_floor.png', False),
-        'object_platform': load_static('./res/gfx/object_platform.png', False),
+        'tomato_idle': load('./res/gfx/tomato_idle.png', (32, 32), True),
+        'tomato_attack': load('./res/gfx/tomato_attack.png', (32, 32), True),
+        'tomato_projectile': load_static('./res/gfx/tomato_projectile.png', True),
         'level': load_static('./res/gfx/map.png', False)
     }
 
-    whitemasked_frame_data = {
-        'player_hurt': generate_whitemask(frame_data['player_hurt']),
-        'onion_run': generate_whitemask(frame_data['onion_run']),
-        'onion_attack': generate_whitemask(frame_data['onion_attack'])
-    }
+    animations_to_whitemask = ['player_hurt', 'onion_run', 'onion_attack', 'tomato_idle', 'tomato_attack']
+    for anim_name in animations_to_whitemask:
+        whitemasked_frame_data[anim_name] = generate_whitemask(frame_data[anim_name])
 
 
 #  An instance of an animation. Refers to the frames of an animation without actually storing duplicate loaded images

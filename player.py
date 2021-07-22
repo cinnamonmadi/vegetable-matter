@@ -42,10 +42,14 @@ class Player:
     def get_hitbox(self):
         return self.position.sum_with(self.hitbox_offset).as_tuple() + self.hitbox_size
 
-    def apply_knockback(self, x, y):
+    def take_damage(self, hurtbox, damage):
+        hurtbox_center_x = hurtbox[0] + (hurtbox[2] / 2)
+        hitbox_center_x = self.get_hitbox()[0] + (self.get_hitbox()[2] / 2)
+        self.velocity = shared.Vector(3, -2)
+        if hurtbox_center_x >= hitbox_center_x:
+            self.velocity.x = -3
         self.knockback_on = True
         self.invuln_timer = Player.INVULN_DURATION
-        self.velocity = shared.Vector(x, y)
 
     def set_direction(self, direction):
         if self.run_animation.flip_h and direction == 1:
@@ -89,15 +93,6 @@ class Player:
         if self.jump_input_timer < 0:
             self.jump_input_timer = 0
 
-        for hurtbox in hurtboxes:
-            if shared.is_rect_collision(self.get_hitbox(), hurtbox):
-                hurtbox_center_x = hurtbox[0] + (hurtbox[2] / 2)
-                hitbox_center_x = self.get_hitbox()[0] + (self.get_hitbox()[2] / 2)
-                if hurtbox_center_x >= hitbox_center_x:
-                    self.apply_knockback(-3, -2)
-                else:
-                    self.apply_knockback(3, -2)
-                break
 
         self.coyote_timer -= delta
         if self.coyote_timer < 0:
