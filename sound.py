@@ -11,8 +11,6 @@ def load_all():
         'player_shoot': pygame.mixer.Sound('./res/sfx/player_shoot.wav')
     }
 
-    sfx['player_shoot'].set_volume(0.3)
-
 
 def play(name):
     sfx[name].play()
